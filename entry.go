@@ -105,7 +105,7 @@ func (entry *Entry) WithContext(ctx context.Context) *Entry {
 	for k, v := range entry.Data {
 		dataCopy[k] = v
 	}
-	return &Entry{Logger: entry.Logger, Data: dataCopy, Time: entry.Time, err: entry.err, Context: ctx}
+	return &Entry{Logger: entry.Logger, Data: dataCopy, Time: entry.Time, err: entry.err, Context: ctx, Caller: entry.Caller}
 }
 
 // Add a single field to the Entry.
@@ -139,7 +139,7 @@ func (entry *Entry) WithFields(fields Fields) *Entry {
 			data[k] = v
 		}
 	}
-	return &Entry{Logger: entry.Logger, Data: data, Time: entry.Time, err: fieldErr, Context: entry.Context}
+	return &Entry{Logger: entry.Logger, Data: data, Time: entry.Time, err: fieldErr, Context: entry.Context, Caller: entry.Caller}
 }
 
 // Overrides the time of the Entry.
@@ -148,7 +148,46 @@ func (entry *Entry) WithTime(t time.Time) *Entry {
 	for k, v := range entry.Data {
 		dataCopy[k] = v
 	}
-	return &Entry{Logger: entry.Logger, Data: dataCopy, Time: t, err: entry.err, Context: entry.Context}
+	return &Entry{Logger: entry.Logger, Data: dataCopy, Time: t, err: entry.err, Context: entry.Context, Caller: entry.Caller}
+}
+
+// Overrides the caller frame of the Entry.
+//
+// This method works regardless of whether ReportCaller is enabled or not.
+func (entry *Entry) WithCaller(frame *runtime.Frame) *Entry {
+	dataCopy := make(Fields, len(entry.Data))
+	for k, v := range entry.Data {
+		dataCopy[k] = v
+	}
+	return &Entry{Logger: entry.Logger, Data: dataCopy, Time: entry.Time, err: entry.err, Context: entry.Context, Caller: frame}
+}
+
+// Overrides the caller frame of the Entry,
+// finding the frame at the given calldepth.
+// A calldepth of 0 asks to fetch the frame
+// that calls WithCallerAt.
+//
+// If ReportCaller is disabled on this entry's logger,
+// returns an exact copy of entry.
+func (entry *Entry) WithCallerAt(calldepth int) *Entry {
+	entry.Logger.mu.Lock()
+	if !entry.Logger.ReportCaller {
+		entry.Logger.mu.Unlock()
+
+		dataCopy := make(Fields, len(entry.Data))
+		for k, v := range entry.Data {
+			dataCopy[k] = v
+		}
+		return &Entry{Logger: entry.Logger, Data: dataCopy, Time: entry.Time, err: entry.err, Context: entry.Context, Caller: entry.Caller}
+	}
+
+	defer entry.Logger.mu.Unlock()
+
+	pcs := []uintptr{0}
+	depth := runtime.Callers(calldepth+2, pcs)
+	frames := runtime.CallersFrames(pcs[:depth])
+	frame, _ := frames.Next()
+	return entry.WithCaller(&frame)
 }
 
 // getPackageName reduces a fully qualified function name to the package name
@@ -227,7 +266,7 @@ func (entry Entry) log(level Level, msg string) {
 	entry.Level = level
 	entry.Message = msg
 	entry.Logger.mu.Lock()
-	if entry.Logger.ReportCaller {
+	if entry.Logger.ReportCaller && entry.Caller == nil {
 		entry.Caller = getCaller()
 	}
 	entry.Logger.mu.Unlock()
