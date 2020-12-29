@@ -1,5 +1,24 @@
 # Logrus <img src="http://i.imgur.com/hTeVwmJ.png" width="40" height="40" alt=":walrus:" class="emoji" title=":walrus:"/> [![Build Status](https://travis-ci.org/sirupsen/logrus.svg?branch=master)](https://travis-ci.org/sirupsen/logrus) [![GoDoc](https://godoc.org/github.com/sirupsen/logrus?status.svg)](https://godoc.org/github.com/sirupsen/logrus)
 
+> Note: This branch (local-release) maintains releases of logrus
+> under the go package `github.com/nelsonxb/logrus`.
+> You probably want to import `github.com/sirupsen/logrus`,
+> unless you need one of my features that haven't been merged.
+>
+> Maintenance of these versions are on an a basis of
+> as-and-when I need them.
+>
+> The actual version numbers in this package will get a little out of order,
+> and semver is going to be broken.
+> Unmerged features are released under patch version increments,
+> and patch versions from upstream
+> will increment it further.
+> For example, `v1.7.1` is upstream `v1.7.0` plus `WithCaller`,
+> so upstream `v1.7.1` would probably end up as `v1.7.2`.
+>
+> Note that the documentation hasn't been updated with the new package name.
+> The remainder of this README is unchanged from upstream.
+
 Logrus is a structured logger for Go (golang), completely API compatible with
 the standard library logger.
 
